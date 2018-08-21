@@ -1,7 +1,6 @@
 package org.ff4j.cache;
 
 import java.io.Serializable;
-import java.util.Map;
 
 /*
  * #%L
@@ -46,6 +45,9 @@ public class Store2CachePollingWorker implements Runnable, Serializable {
     
     /** Target feature store to be proxified to cache features. */
     private FF4JCacheManager cacheManager;
+
+    /** Cache proxy. */
+    private FF4jCacheProxy ff4JCacheProxy;
     
     /**
      * Parameterized constructor.
@@ -62,34 +64,47 @@ public class Store2CachePollingWorker implements Runnable, Serializable {
         this.sourcePropertyStore = sp;
         this.cacheManager        = cp;
     }
-    
+
+    /**
+     * Parameterized constructor.
+     *
+     * @param fcp
+     *      cache proxy
+     */
+    public Store2CachePollingWorker(FF4jCacheProxy fcp) {
+        this(fcp.getTargetFeatureStore(),fcp.getTargetPropertyStore(),null);
+        this.ff4JCacheProxy      = fcp;
+    }
+
     /** {@inheritDoc} */
     @Override
     public void run() {
         try {
-            
+
+            FF4JCacheManager cacheManager;
+            if (ff4JCacheProxy!=null) {
+                cacheManager = new InMemoryCacheManager();
+            } else {
+                cacheManager = this.cacheManager;
+            }
             if (sourceFeatureStore != null) {
-                // Access the store, if failed an error is raised and cache is not cleared.
-                Map < String, Feature > mapOfFeatures = sourceFeatureStore.readAll();
-                // Clear cache
                 cacheManager.clearFeatures();
-                // Fill Cache
-                for (Feature f : mapOfFeatures.values()) {
+                for (Feature f : sourceFeatureStore.readAll()
+                        .values()) {
                     cacheManager.putFeature(f);
                 }
             }
-            
             if (sourcePropertyStore != null) {
-                // Access the store, if failed an error is raised and cache is not cleared.
-                Map < String, Property<?> > mapOfProperties = sourcePropertyStore.readAllProperties();
-                // Clear cache
                 cacheManager.clearProperties();
-                // Fill Cache
-                for (Property<?> p : mapOfProperties.values()) {
+                for (Property<?> p : sourcePropertyStore.readAllProperties()
+                        .values()) {
                     cacheManager.putProperty(p);
                 }
             }
-            
+
+            if (ff4JCacheProxy!=null) {
+                ff4JCacheProxy.setCacheManager(cacheManager);
+            }
         } catch (Exception ex) {
             // Work in background (worker) failed 'silently'
             ex.printStackTrace();
@@ -97,3 +112,4 @@ public class Store2CachePollingWorker implements Runnable, Serializable {
     }
 
 }
+

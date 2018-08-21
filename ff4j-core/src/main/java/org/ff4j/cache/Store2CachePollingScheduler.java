@@ -9,9 +9,9 @@ package org.ff4j.cache;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -31,26 +31,26 @@ import org.ff4j.property.store.PropertyStore;
 
 /**
  * Poll target stores on a fixed delay basis and fill cache to avoid reaching TTL of key.
- * 
+ *
  * @author Cedrick LUNVEN (@clunven)
  */
 public class Store2CachePollingScheduler implements Serializable{
-    
+
     /** Serial. */
     private static final long serialVersionUID = -1198719730422859724L;
 
     /** polling delay. */
     private long pollingDelay = 10000;
-    
+
     /** initial delay at start. */
     private long initialDelay = 0;
-    
+
     /** Scheduler for the worker. */
     private ScheduledExecutorService executor;
-    
+
     /** Current runnable. */
     private Store2CachePollingWorker worker;
-    
+
     /**
      * Parameterized constructor.
      *
@@ -72,7 +72,24 @@ public class Store2CachePollingScheduler implements Serializable{
             }
         });
     }
-    
+
+    /**
+     * Parameterized constructor.
+     * @param fcp
+     *      cache proxy
+     */
+    public Store2CachePollingScheduler(FF4jCacheProxy fcp) {
+        worker = new Store2CachePollingWorker(fcp);
+        executor = Executors.newScheduledThreadPool(1, new ThreadFactory() {
+            @Override
+            public Thread newThread(Runnable r) {
+                Thread t = new Thread(r, "FF4j_Store2CachePollingWorker");
+                t.setDaemon(true);
+                return t;
+            }
+        });
+    }
+
     /**
      * Start polling with a polling
      */
@@ -80,14 +97,14 @@ public class Store2CachePollingScheduler implements Serializable{
         this.pollingDelay = delay;
         start();
     }
-    
+
     /**
      * Start polling.
      */
     public void start() {
         executor.scheduleWithFixedDelay(worker, initialDelay, pollingDelay, TimeUnit.MILLISECONDS);
     }
-    
+
     /** Stop Polling. */
     public void stop() {
         if (executor != null) {
@@ -133,7 +150,7 @@ public class Store2CachePollingScheduler implements Serializable{
     public void setInitialDelay(long initialDelay) {
         this.initialDelay = initialDelay;
     }
-    
-    
+
+
 
 }
