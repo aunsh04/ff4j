@@ -1,6 +1,8 @@
 package org.ff4j.cache;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /*
@@ -49,6 +51,8 @@ public class Store2CachePollingWorker implements Runnable, Serializable {
 
     /** Cache proxy. */
     private FF4jCacheProxy ff4JCacheProxy;
+
+    private CacheManagerValidator cacheManagerValidator;
     
     /**
      * Parameterized constructor.
@@ -83,6 +87,7 @@ public class Store2CachePollingWorker implements Runnable, Serializable {
     public void run() {
 
         try {
+            List<Property> propertyList = new ArrayList<Property>();
             FF4JCacheManager cacheManager;
             if (ff4JCacheProxy!=null) {
                 cacheManager = new InMemoryCacheManager();
@@ -108,12 +113,15 @@ public class Store2CachePollingWorker implements Runnable, Serializable {
                 cacheManager.clearProperties();
                 // Fill Cache
                 for (Property<?> p : mapOfProperties.values()) {
+                    propertyList.add(p);
                     cacheManager.putProperty(p);
                 }
             }
 
             if (ff4JCacheProxy!=null) {
-                ff4JCacheProxy.setCacheManager(cacheManager);
+                if (cacheManagerValidator.validate(propertyList)) {
+                    ff4JCacheProxy.setCacheManager(cacheManager);
+                }
             }
             
         } catch (Exception ex) {
